@@ -1,4 +1,6 @@
-# auto-switch-miners
+# auto-switch-miners for Linux
+
+I noticed there wasn't a easy way to use a auto miner switching like that done by NiceHash on Windows. Most of the utilities are available only for Windows. So created this script that can be used to switch miners on Linux.
 
 For Linux (and should work with windows, though not tested)
 
@@ -15,3 +17,12 @@ All the configurations for this program utility are done in the input.cfg file -
 Section A] provides you to customize and mimic input parameters to what you typically input on the whattomine.com page.
 
 Section B] provides users to specify their choice of miners to be used based on 'coin-algorithm'=minerscript or 'algorithm'=minerscript format
+
+License:
+You are free to use this script for your personal rigs/custom gaming pc based miners. 
+
+Encourage donations to following address:
+
+BTC: 3HoBJWxN9HWGmNU4FTfAthqnj1j52Y9ZyX
+ETH: 0xBb8DaaaFA18B01DF169e197988Ed708e868508D5
+LTC: MXC6KNMr75mruK3Bsv62hMaJ9UBeEaNXn8
