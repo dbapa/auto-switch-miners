@@ -23,6 +23,8 @@ You are free to use this script for your personal rigs/custom gaming pc based mi
 
 Encourage donations to following address:
 
-BTC: 3HoBJWxN9HWGmNU4FTfAthqnj1j52Y9ZyX
-ETH: 0xBb8DaaaFA18B01DF169e197988Ed708e868508D5
+BTC: 3HoBJWxN9HWGmNU4FTfAthqnj1j52Y9ZyX 
+
+ETH: 0xBb8DaaaFA18B01DF169e197988Ed708e868508D5 
+
 LTC: MXC6KNMr75mruK3Bsv62hMaJ9UBeEaNXn8
