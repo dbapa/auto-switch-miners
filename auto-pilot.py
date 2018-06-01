@@ -1,3 +1,5 @@
+# Copyright (c) 2018-2020 dbapa <support@abapt.com>
+
 import configparser
 import os, time, subprocess, shlex
 import requests, json, urllib
