@@ -1,5 +1,3 @@
-# Copyright (c) 2018-2020 dbapa <support@abapt.com>
-
 import configparser
 import os, time, subprocess, shlex
 import requests, json, urllib
@@ -8,7 +6,7 @@ import errno, signal
 
 ALGO_SHORTNAMES = {
 "ethash":"eth","groestl":"gro","phi1612":"phi","cryptonight":"cn",
-"cryptonightv7":"cn7","equihash":"eq","lyra2REv2":"lrev2","neoscrypt":"ns",
+"cryptonightv7":"cn7","equihash":"eq","lyra2rev2":"lre","neoscrypt":"ns",
 "timetravel10":"tt10","x16r":"x16r","skunkhash":"skh","nist5":"n5","xevan":"xn"}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 #BASE_DIR = os.environ['HOME']
@@ -58,17 +56,21 @@ def get_uri():
     algorithms = get_section("algorithms")
     #print("[AutoSwitch] "+type(algorithms))
     for algo in algorithms:
+        algo = str(algo).lower()
         if get_content("algorithms",algo) == "1":
             # print("[AutoSwitch] "+"Algo ",algo," is enabled")
             algo_code = ALGO_SHORTNAMES[algo]
             str2 = "&" + algo_code +"=true"
-            str1 = "&factor%5B"+algo_code+"_hr%5D="+get_content(algo,"hash-rate","20")+"&factor%5B"+algo_code+"eth_p%5D="+get_content(algo,"power","90")
+            if algo_code == 'lre':
+                algo_code = algo_code + 'v2'
+            str1 = "&factor%5B"+algo_code+"_hr%5D="+get_content(algo,"hash-rate","20")+"&factor%5B"+algo_code+"_p%5D="+get_content(algo,"power","90")
             # print("[AutoSwitch] "+str2)
             # print("[AutoSwitch] "+str1)
             uri = str(uri+str2)
             uri = str(uri+str1)
 
-    uri =  uri + "&factor%5Bcost%5D="+get_content("params","power_cost_per_kWh")
+    uri =  uri + "&factor%5Bcost%5D="+get_content("general","power_cost_per_kwh")
+    #print("cost:",get_content("params","power_cost_per_kwh"))
 
     str4 = "&sort=Profitability24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=binance&factor%5Bexchanges%5D%5B%5D=bitfinex&\
 factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=cryptobridge&\
@@ -91,18 +93,18 @@ def get_performance(coins_dict):
         else:
             algo=coins_dict[item]['algorithm']
             key = item + '-'+algo
-        unsorted_list[key]=coins_dict[item]['btc_revenue24']
-        #print("[AutoSwitch] "+"key:",key," rev:",coins_dict[item]['btc_revenue24'])
+        unsorted_list[key]=format(float(coins_dict[item]['btc_revenue24']),'.8f')
+        print("[AutoSwitch] "+"Algorithm:",key," profitability:",unsorted_list[key]) #coins_dict[item]['btc_revenue24'])
     sorted_list = OrderedDict(sorted(unsorted_list.items(),key=lambda t:t[1]))
     #print("[AutoSwitch] "+"Sorted:\n",len(sorted_list))
-    #for i in range(len(sorted_list)):
-    #    print("[AutoSwitch] "+sorted_list.popitem(last=True))
+    # for i in range(len(sorted_list)):
+    #     print("[AutoSwitch] "+sorted_list.popitem(last=True)[0])
     return sorted_list
 
 
 def get_from_whattomine():
     uri = get_uri()
-    #print("[AutoSwitch] "+"URL:",uri)
+    print("[AutoSwitch] "+"URL:",uri)
     #get_coin_algo_list(data)
     #data = json.load(urllib.request.urlopen(uri))
     r = requests.get(uri)
@@ -250,12 +252,12 @@ if __name__ == '__main__':
     new_perf24h = 0.0
     while True:
         performers = get_from_whattomine()
-        #print("[AutoSwitch] "+performers)
+
         matchFound = False
         for i in range(len(performers)):
             #print("[AutoSwitch] "+performers.popitem(last=True))
             topper = performers.popitem(last=True)
-            #print("[AutoSwitch] "+"topper is:",topper)
+            print("[AutoSwitch] "+"Most profitable is:",str(topper[0]))
             for miner in miners_available:
                 #print("[AutoSwitch] "+"miner:",miner," type:",type(miner)," Tpper:",topper[0])
                 if str(topper[0]).lower() == miner:
@@ -274,10 +276,15 @@ if __name__ == '__main__':
         #print("[AutoSwitch] "+"Exited Top performers loop..miner found")
                 # exit the main for loop as matching miner was found
         if matchFound == True:
-            if current_perf24h != 0.0:
+            if new_algo == current_algo:
+                # There will be no switch, just update the revised perf_rate
+                current_perf24h = float(new_perf24h)
+                perf_diff = 0
+            elif current_perf24h != 0.0:
                 perf_x = (new_perf24h - current_perf24h)/current_perf24h
+                #print("[AutoSwitch] perf_x:",perf_x," current:",current_perf24h," new:",new_perf24h)
                 perf_diff = float(perf_x) - float(preferred_perf_threshold)
-                print("[AutoSwitch] "+"Perf difference calculated:",perf_diff)
+                print("[AutoSwitch] "+"Perf difference:",perf_diff)
             else:
                 perf_diff = new_perf24h
                 #print("[AutoSwitch] "+"Perf difference NOT calculated:",perf_diff)
