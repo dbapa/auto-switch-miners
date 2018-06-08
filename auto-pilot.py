@@ -115,11 +115,11 @@ def get_from_whattomine():
 
 def change_miner(new_algo,new_perf24h):
     change_trigger = False
-    #print("[AutoSwitch] "+"been asked to change algo to :",new_algo," with 24hr profitability:",str(new_perf24h))
+    print("[AutoSwitch] "+"been asked to change algo to :",new_algo," with 24hr profitability:",str(new_perf24h))
     global current_algo, current_perf24h, miner_proc
     # check if miner proc has children - which will mean miner is running
     if miner_proc  != None and pid_exists(miner_proc.pid):
-        change_trigger = True
+        change_trigger = False
     else:
         change_trigger = True
     if current_algo != new_algo or change_trigger:
@@ -135,7 +135,7 @@ def change_miner(new_algo,new_perf24h):
         miner_proc = subprocess.Popen(['bash',cmd]) #,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #except:
         #    print("[AutoSwitch] "+"Process exited or errored")
-        print("[AutoSwitch] "+"Miner switched from:",current_algo,"with 24h:",str(current_perf24h)," to:",new_algo," with proc ID:",miner_proc.pid)
+        print("[AutoSwitch] "+"Miner switched from:",current_algo,"with 24h:",str(current_perf24h)," to:",new_algo,":",str(new_perf24h)," with proc ID:",miner_proc.pid)
         current_algo = new_algo
         current_perf24h = new_perf24h
         write_content("internal","id",miner_proc.pid) #this PID will be killed at startup
@@ -153,7 +153,7 @@ def kill_proc(proc):
             #print("[AutoSwitch] "+"need to kill:",p_child)
             for child in p_child:
                 #print("[AutoSwitch] "+"killing children:",child.pid)
-                subprocess.call(['kill',str(child.pid)])
+                subprocess.call(['kill','-9',str(child.pid)])
             #print("[AutoSwitch] "+"killing main:",proc.pid)
             subprocess.call(['kill','-9',str(proc.pid)])
     except:
@@ -210,33 +210,46 @@ def startup():
             os.remove(os.path.join(BASE_DIR,"internal.cfg"))
     return ret
 
+# Will return PASS if no change required, RESTART if new miner proc not Found
+# and will return START_DEFAULT if retry attempts exceeded, so start default miner
 def check_for_stalled_miner(proc):
     global retries,miner_proc
+    ret_flag = "PASS" # indicates no need to change miner
     if proc != None and pid_exists(proc.pid):
         p = psutil.Process(proc.pid)
         proc_children = p.children(recursive=True)
         if len(proc_children) > 0:
             # The miner is running, do nothing and exit
-            pass
+            print("[AutoSwitch] "+" Currently mining:",new_algo)
         else:
             # kill pid and start new miner
             ret = kill_proc(proc)
             if retries > 3:
                 # after 3 failed attempts try changing to default miner
                 m = "default-miner"
-                miner_proc = change_miner(m,0.00010)
+                print("[AutoSwitch] "+"Miner process not detected. Switching to default miner.")
+                #miner_proc = change_miner(m,0.00010)
                 retries = 0
+                ret_flag = "START_DEFAULT"
             else:
-                miner_proc = change_miner(new_algo,float(new_perf24h))
+                print("[AutoSwitch] "+"Miner process not detected. Attempting to restart miner:",new_algo)
+                #miner_proc = change_miner(new_algo,float(new_perf24h))
                 retries += 1
+                ret_flag = "RESTART"
     else:
         if retries > 3:
             # after 3 failed attempts try changing to default miner
+            print("[AutoSwitch] "+"No miner detected. Switching to default miner.")
             m = "default-miner"
-            miner_proc = change_miner(m,0.00010)
+            retries = 0
+            #miner_proc = change_miner(m,0.00010)
+            ret_flag = "START_DEFAULT"
         else:
-            miner_proc = change_miner(new_algo,float(new_perf24h))
-
+            print("[AutoSwitch] "+"No miner detected. Attempting to restart miner:",new_algo)
+            #miner_proc = change_miner(new_algo,float(new_perf24h))
+            retries += 1
+            ret_flag = "RESTART"
+    return ret_flag
 
 
 if __name__ == '__main__':
@@ -303,15 +316,22 @@ if __name__ == '__main__':
 
         if polling_frequency is None:
             polling_frequency = 600
-        step_counter = 30
+        step_counter = 60
         i=0
         while True:
+            if i==0:
+                time.sleep(120)
+            else:
+                time.sleep(step_counter)
             i += step_counter
             if i > int(polling_frequency):
                 break
             else:
-                check_for_stalled_miner(miner_proc)
-            time.sleep(step_counter)
+                flag = check_for_stalled_miner(miner_proc)
+                if flag == "RESTART":
+                    miner_proc = change_miner(new_algo,float(new_perf24h))
+                elif flag == "START_DEFAULT":
+                    miner_proc = change_miner(m,0.00010)
 
         #time.sleep(int(polling_frequency))
         #print("[AutoSwitch] "+"Will sleep for :", polling_frequency)
