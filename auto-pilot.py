@@ -253,7 +253,8 @@ def check_for_stalled_miner(proc):
 
 
 if __name__ == '__main__':
-    global current_algo, miner_proc
+#    global current_algo, miner_proc
+current_algo, miner_proc
     #performers = get_from_whattomine()
     if startup() == False:
         print("[AutoSwitch] "+"Another miner instance seems to be running. Please terminate it and try again.")
